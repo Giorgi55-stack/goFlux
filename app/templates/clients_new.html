@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Novo cliente — Meta Ads Automation{% endblock %}
+{% block content %}
+<div class="max-w-2xl">
+  <h1 class="text-2xl font-semibold mb-6">Novo cliente</h1>
+
+  <form hx-post="/clients" hx-target="#form-errors" hx-swap="innerHTML"
+        class="space-y-4 bg-white border border-gray-200 rounded p-6">
+
+    <div id="form-errors"></div>
+
+    <div>
+      <label class="block text-sm font-medium mb-1">
+        Nome <span class="text-red-500">*</span>
+      </label>
+      <input name="name" required
+             class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium mb-1">
+        Ad Account ID <span class="text-red-500">*</span>
+        <span class="text-gray-400 text-xs">(formato act_XXXXXX)</span>
+      </label>
+      <input name="ad_account_id" required pattern="act_\d+"
+             class="w-full border border-gray-300 rounded px-3 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium mb-1">
+        Page ID <span class="text-red-500">*</span>
+      </label>
+      <input name="page_id" required
+             class="w-full border border-gray-300 rounded px-3 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium mb-1">
+        Instagram Actor ID <span class="text-gray-400 text-xs">(opcional)</span>
+      </label>
+      <input name="instagram_actor_id"
+             class="w-full border border-gray-300 rounded px-3 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium mb-1">
+        Pixel ID <span class="text-gray-400 text-xs">(opcional)</span>
+      </label>
+      <input name="pixel_id"
+             class="w-full border border-gray-300 rounded px-3 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium mb-1">Timezone</label>
+        <input name="timezone" value="America/Sao_Paulo"
+               class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Currency</label>
+        <input name="currency" value="BRL" maxlength="3"
+               class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+    </div>
+
+    <div class="flex justify-end gap-2 pt-2">
+      <a href="/clients"
+         class="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 text-sm">
+        Cancelar
+      </a>
+      <button type="submit"
+              class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm font-medium">
+        Criar
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
