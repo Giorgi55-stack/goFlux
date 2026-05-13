@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Histórico — Meta Ads Automation{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-semibold mb-6">Histórico</h1>
+
+<section class="mb-10">
+  <h2 class="text-lg font-semibold mb-3">Campanhas criadas <span class="text-sm text-gray-500 font-normal">(últimas 50)</span></h2>
+  {% if campaigns %}
+  <div class="bg-white border border-gray-200 rounded overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-100 text-gray-600">
+        <tr>
+          <th class="text-left px-3 py-2 font-medium">Quando</th>
+          <th class="text-left px-3 py-2 font-medium">Cliente</th>
+          <th class="text-left px-3 py-2 font-medium">Nome</th>
+          <th class="text-left px-3 py-2 font-medium">Objetivo</th>
+          <th class="text-left px-3 py-2 font-medium">Orçamento</th>
+          <th class="text-left px-3 py-2 font-medium">Status</th>
+          <th class="text-left px-3 py-2 font-medium">AdSets</th>
+          <th class="text-left px-3 py-2 font-medium">Ads</th>
+          <th class="text-left px-3 py-2 font-medium">Meta ID</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in campaigns %}
+        <tr class="border-t border-gray-100">
+          <td class="px-3 py-2 text-xs font-mono">{{ c.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+          <td class="px-3 py-2 text-xs">
+            {% if c.client_id in clients %}{{ clients[c.client_id].name }}{% else %}?{% endif %}
+          </td>
+          <td class="px-3 py-2 text-xs font-mono">{{ c.name }}</td>
+          <td class="px-3 py-2 text-xs">{{ c.objective }}</td>
+          <td class="px-3 py-2 text-xs">R$ {{ "%.2f"|format(c.daily_budget / 100) }}</td>
+          <td class="px-3 py-2 text-xs">{{ c.status.value }}</td>
+          <td class="px-3 py-2 text-xs text-center">{{ (c.ad_set_ids or []) | length }}</td>
+          <td class="px-3 py-2 text-xs text-center">{{ (c.ad_ids or []) | length }}</td>
+          <td class="px-3 py-2 text-xs font-mono">
+            <a href="/campaigns/result/{{ c.id }}" class="text-blue-600 hover:underline">{{ c.meta_campaign_id }}</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="bg-white border border-gray-200 rounded p-6 text-center text-gray-500 text-sm">
+    Nenhuma campanha foi criada ainda.
+  </div>
+  {% endif %}
+</section>
+
+<section>
+  <h2 class="text-lg font-semibold mb-3">Execuções de regra <span class="text-sm text-gray-500 font-normal">(últimas 100)</span></h2>
+  {% if logs %}
+  <div class="bg-white border border-gray-200 rounded overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-100 text-gray-600">
+        <tr>
+          <th class="text-left px-3 py-2 font-medium">Quando</th>
+          <th class="text-left px-3 py-2 font-medium">Regra</th>
+          <th class="text-left px-3 py-2 font-medium">Ação</th>
+          <th class="text-left px-3 py-2 font-medium">Resultado</th>
+          <th class="text-left px-3 py-2 font-medium">Detalhes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+        <tr class="border-t border-gray-100">
+          <td class="px-3 py-2 text-xs font-mono">{{ log.executed_at.strftime('%Y-%m-%d %H:%M') }}</td>
+          <td class="px-3 py-2 text-xs">
+            {% if log.rule_id and log.rule_id in rules %}{{ rules[log.rule_id].name }}{% else %}<span class="text-gray-400">(manual / removida)</span>{% endif %}
+          </td>
+          <td class="px-3 py-2 text-xs font-mono">{{ log.action }}</td>
+          <td class="px-3 py-2 text-xs">
+            {% if log.result.value == 'success' %}
+              <span class="text-green-600">✓ success</span>
+            {% elif log.result.value == 'error' %}
+              <span class="text-red-600">✗ error</span>
+            {% else %}
+              <span class="text-yellow-600">~ {{ log.result.value }}</span>
+            {% endif %}
+          </td>
+          <td class="px-3 py-2 text-xs font-mono text-gray-600">
+            {% if log.details %}{{ log.details | tojson(indent=0) | truncate(80) }}{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="bg-white border border-gray-200 rounded p-6 text-center text-gray-500 text-sm">
+    Nenhuma execução de regra registrada ainda.
+  </div>
+  {% endif %}
+</section>
+{% endblock %}
