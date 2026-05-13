@@ -9,6 +9,7 @@ from starlette_csrf import CSRFMiddleware
 from app.auth import CurrentUser
 from app.config import get_settings
 from app.database import init_db
+from app.routes import campaigns as campaigns_routes
 from app.routes import clients as clients_routes
 from app.services import meta_api
 from app.services.meta_api import MetaAPIError
@@ -36,6 +37,7 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 app.include_router(clients_routes.router)
+app.include_router(campaigns_routes.router)
 
 
 @app.get("/health")

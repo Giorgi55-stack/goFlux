@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block title %}Nova campanha — Meta Ads Automation{% endblock %}
+{% block content %}
+<div class="max-w-3xl">
+  <h1 class="text-2xl font-semibold mb-6">Nova campanha</h1>
+
+  {% if not clients %}
+  <div class="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded mb-4 text-sm">
+    Você não tem nenhum cliente cadastrado.
+    <a href="/clients/new" class="text-blue-600 hover:underline font-medium">Cadastre um cliente primeiro</a>
+    para poder criar campanhas.
+  </div>
+  {% endif %}
+
+  <form hx-post="/campaigns" hx-target="#form-errors" hx-swap="innerHTML"
+        hx-encoding="multipart/form-data"
+        class="space-y-6 bg-white border border-gray-200 rounded p-6">
+
+    <div id="form-errors"></div>
+
+    <section class="space-y-4">
+      <h2 class="text-lg font-semibold">Configuração</h2>
+
+      <div>
+        <label class="block text-sm font-medium mb-1">
+          Cliente <span class="text-red-500">*</span>
+        </label>
+        <select name="client_id" required {% if not clients %}disabled{% endif %}
+                class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="">— selecione —</option>
+          {% for c in clients %}
+          <option value="{{ c.id }}">{{ c.name }} ({{ c.ad_account_id }})</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium mb-1">
+            Objetivo <span class="text-red-500">*</span>
+          </label>
+          <select name="objective" required
+                  class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="">— selecione —</option>
+            {% for code, label in objectives %}
+            <option value="{{ code }}">{{ label }} ({{ code }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">
+            Orçamento diário (R$) <span class="text-red-500">*</span>
+          </label>
+          <input name="daily_budget" type="number" min="1" step="0.01" required
+                 placeholder="50.00"
+                 class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+      </div>
+    </section>
+
+    <section class="space-y-3">
+      <h2 class="text-lg font-semibold">Públicos <span class="text-sm text-gray-500 font-normal">(1 a {{ max_audiences }}, preencha o que precisar)</span></h2>
+      {% for i in range(max_audiences) %}
+      <div class="grid grid-cols-[140px_1fr_2fr] gap-2 items-center">
+        <label class="text-sm text-gray-700">Público {{ i + 1 }}{% if i == 0 %} <span class="text-red-500">*</span>{% endif %}</label>
+        <input name="audience_name_{{ i }}" placeholder="Nome (ex: Lookalike 1%)"
+               class="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <input name="audience_id_{{ i }}" placeholder="Custom Audience ID"
+               {% if i == 0 %}required{% endif %}
+               class="border border-gray-300 rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+      {% endfor %}
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-lg font-semibold">Criativos <span class="text-sm text-gray-500 font-normal">(1 a {{ max_creatives }}, preencha o que precisar)</span></h2>
+
+      {% for i in range(max_creatives) %}
+      <div class="border border-gray-200 rounded p-4 space-y-3" data-creative-row="{{ i }}">
+        <div class="flex items-center justify-between">
+          <h3 class="font-medium text-sm">Criativo {{ i + 1 }}{% if i == 0 %} <span class="text-red-500">*</span>{% endif %}</h3>
+          <div class="flex gap-3 text-xs">
+            <label class="flex items-center gap-1">
+              <input type="radio" name="creative_type_{{ i }}" value="dark_post"
+                     {% if i == 0 %}checked{% endif %}>
+              Dark post (novo)
+            </label>
+            <label class="flex items-center gap-1">
+              <input type="radio" name="creative_type_{{ i }}" value="existing_link">
+              Link de post existente
+            </label>
+          </div>
+        </div>
+
+        <input name="creative_label_{{ i }}" placeholder="Etiqueta (opcional, ex: video1)"
+               class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+
+        <div data-creative-darkpost class="space-y-2">
+          <input name="creative_primary_text_{{ i }}" placeholder="Texto principal"
+                 class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <div class="grid grid-cols-2 gap-2">
+            <input name="creative_headline_{{ i }}" placeholder="Headline"
+                   class="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <select name="creative_cta_{{ i }}"
+                    class="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              {% for cta in cta_types %}
+              <option value="{{ cta }}">{{ cta }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <input name="creative_description_{{ i }}" placeholder="Descrição (opcional)"
+                 class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <input name="creative_link_{{ i }}" type="url" placeholder="Link de destino"
+                 class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <div>
+            <label class="text-xs text-gray-600">Imagem (opcional — sem imagem, vira post só de link)</label>
+            <input name="creative_image_{{ i }}" type="file" accept="image/*"
+                   class="w-full text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:bg-gray-100 file:text-sm file:font-medium hover:file:bg-gray-200">
+          </div>
+        </div>
+
+        <div data-creative-existing class="space-y-2 hidden">
+          <input name="creative_url_{{ i }}" type="url"
+                 placeholder="URL do post (facebook.com/.../posts/... ou instagram.com/p/...)"
+                 class="w-full border border-gray-300 rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+      </div>
+      {% endfor %}
+    </section>
+
+    <div class="flex justify-end gap-2 pt-2 border-t border-gray-100">
+      <a href="/" class="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 text-sm">Cancelar</a>
+      <button type="submit"
+              class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm font-medium"
+              {% if not clients %}disabled{% endif %}>
+        Criar campanha (PAUSED)
+      </button>
+    </div>
+  </form>
+</div>
+
+<script>
+  document.addEventListener('change', function (e) {
+    if (e.target && e.target.matches('input[type=radio][name^="creative_type_"]')) {
+      var row = e.target.closest('[data-creative-row]');
+      if (!row) return;
+      var isDark = e.target.value === 'dark_post';
+      row.querySelector('[data-creative-darkpost]').classList.toggle('hidden', !isDark);
+      row.querySelector('[data-creative-existing]').classList.toggle('hidden', isDark);
+    }
+  });
+
+  document.body.addEventListener('htmx:beforeSwap', function (e) {
+    var status = e.detail.xhr.status;
+    if (status >= 400 && status < 500) {
+      e.detail.shouldSwap = true;
+      e.detail.isError = false;
+    }
+  });
+</script>
+{% endblock %}
