@@ -1,15 +1,17 @@
 import re
 from html import escape
-from typing import Annotated, Optional
+from typing import Annotated, Any, Optional
 
 from fastapi import APIRouter, Depends, Form, Request
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlmodel import Session, select
 
 from app.auth import CurrentUser
 from app.database import get_session
 from app.models import Client
+from app.services import meta_api
+from app.services.meta_api import MetaAPIError
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -90,3 +92,33 @@ def create_client(
     session.commit()
 
     return Response(status_code=204, headers={"HX-Redirect": "/clients"})
+
+
+@router.get("/api/clients/{client_id}/audiences")
+def list_client_audiences(
+    client_id: int,
+    user: CurrentUser,
+    session: Annotated[Session, Depends(get_session)],
+) -> dict[str, Any]:
+    client = session.get(Client, client_id)
+    if not client:
+        return JSONResponse({"error": "client not found"}, status_code=404)
+    try:
+        audiences = meta_api.list_custom_audiences(client.ad_account_id)
+    except MetaAPIError as e:
+        return JSONResponse(
+            {
+                "ok": False,
+                "error_type": e.type,
+                "error_code": e.code,
+                "error_message": e.message,
+            },
+            status_code=502,
+        )
+    return {
+        "ok": True,
+        "client_id": client.id,
+        "ad_account_id": client.ad_account_id,
+        "count": len(audiences),
+        "audiences": audiences,
+    }
