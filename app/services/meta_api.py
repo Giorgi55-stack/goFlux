@@ -1,9 +1,13 @@
+import base64
 import logging
 import time
 from functools import wraps
-from typing import Any, Callable, TypeVar
+from typing import Any, Callable, Optional, TypeVar
 
 from facebook_business.adobjects.adaccount import AdAccount
+from facebook_business.adobjects.campaign import Campaign as FBCampaign
+from facebook_business.adobjects.iguser import IGUser
+from facebook_business.adobjects.page import Page
 from facebook_business.adobjects.user import User
 from facebook_business.api import FacebookAdsApi
 from facebook_business.exceptions import FacebookRequestError
@@ -140,3 +144,170 @@ def list_custom_audiences(ad_account_id: str) -> list[dict[str, Any]]:
         }
         for a in audiences
     ]
+
+
+@with_retry()
+def create_campaign(
+    ad_account_id: str,
+    name: str,
+    objective: str,
+    daily_budget_cents: int,
+    status: str = "PAUSED",
+    special_ad_categories: Optional[list[str]] = None,
+) -> str:
+    init_api()
+    account = AdAccount(ad_account_id)
+    campaign = account.create_campaign(
+        params={
+            "name": name,
+            "objective": objective,
+            "status": status,
+            "special_ad_categories": special_ad_categories or [],
+            "daily_budget": daily_budget_cents,
+        }
+    )
+    return campaign["id"]
+
+
+@with_retry()
+def create_adset(
+    ad_account_id: str,
+    campaign_id: str,
+    name: str,
+    targeting: dict[str, Any],
+    optimization_goal: str,
+    billing_event: str,
+    status: str = "PAUSED",
+    extra_params: Optional[dict[str, Any]] = None,
+) -> str:
+    init_api()
+    account = AdAccount(ad_account_id)
+    params: dict[str, Any] = {
+        "name": name,
+        "campaign_id": campaign_id,
+        "optimization_goal": optimization_goal,
+        "billing_event": billing_event,
+        "targeting": targeting,
+        "status": status,
+    }
+    if extra_params:
+        params.update(extra_params)
+    adset = account.create_ad_set(params=params)
+    return adset["id"]
+
+
+@with_retry()
+def create_ad_creative_from_post(
+    ad_account_id: str, name: str, object_story_id: str
+) -> str:
+    init_api()
+    account = AdAccount(ad_account_id)
+    creative = account.create_ad_creative(
+        params={"name": name, "object_story_id": object_story_id}
+    )
+    return creative["id"]
+
+
+@with_retry()
+def create_ad_creative_from_spec(
+    ad_account_id: str,
+    name: str,
+    page_id: str,
+    link_data: dict[str, Any],
+    instagram_actor_id: Optional[str] = None,
+) -> str:
+    init_api()
+    account = AdAccount(ad_account_id)
+    object_story_spec: dict[str, Any] = {
+        "page_id": page_id,
+        "link_data": link_data,
+    }
+    if instagram_actor_id:
+        object_story_spec["instagram_actor_id"] = instagram_actor_id
+    creative = account.create_ad_creative(
+        params={"name": name, "object_story_spec": object_story_spec}
+    )
+    return creative["id"]
+
+
+@with_retry()
+def create_ad(
+    ad_account_id: str,
+    adset_id: str,
+    creative_id: str,
+    name: str,
+    status: str = "PAUSED",
+) -> str:
+    init_api()
+    account = AdAccount(ad_account_id)
+    ad = account.create_ad(
+        params={
+            "name": name,
+            "adset_id": adset_id,
+            "creative": {"creative_id": creative_id},
+            "status": status,
+        }
+    )
+    return ad["id"]
+
+
+@with_retry()
+def upload_image(ad_account_id: str, image_bytes: bytes) -> str:
+    init_api()
+    encoded = base64.b64encode(image_bytes).decode("utf-8")
+    account = AdAccount(ad_account_id)
+    image = account.create_ad_image(
+        fields=["hash"],
+        params={"bytes": encoded},
+    )
+    return image["hash"]
+
+
+@with_retry()
+def create_unpublished_link_post(
+    page_id: str, message: str, link: Optional[str] = None
+) -> str:
+    init_api()
+    page = Page(page_id)
+    params: dict[str, Any] = {"message": message, "published": False}
+    if link:
+        params["link"] = link
+    post = page.create_feed(params=params)
+    return post["id"]
+
+
+@with_retry()
+def resolve_instagram_media_id(
+    shortcode: str, ig_actor_id: str, page_limit: int = 100
+) -> Optional[str]:
+    init_api()
+    ig = IGUser(ig_actor_id)
+    media = ig.get_media(
+        fields=["id", "shortcode"], params={"limit": page_limit}
+    )
+    for m in media:
+        if m.get("shortcode") == shortcode:
+            return m["id"]
+    return None
+
+
+@with_retry()
+def pause_campaign(campaign_id: str) -> None:
+    init_api()
+    FBCampaign(campaign_id).api_update(params={"status": "PAUSED"})
+
+
+@with_retry()
+def activate_campaign(campaign_id: str) -> None:
+    init_api()
+    FBCampaign(campaign_id).api_update(params={"status": "ACTIVE"})
+
+
+@with_retry()
+def update_campaign_daily_budget(
+    campaign_id: str, daily_budget_cents: int
+) -> None:
+    init_api()
+    FBCampaign(campaign_id).api_update(
+        params={"daily_budget": daily_budget_cents}
+    )
