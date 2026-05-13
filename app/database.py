@@ -8,18 +8,26 @@ from app.config import get_settings
 settings = get_settings()
 
 
+def _normalize_url(url: str) -> str:
+    if url.startswith("postgres://"):
+        return "postgresql://" + url[len("postgres://"):]
+    return url
+
+
+_db_url = _normalize_url(settings.database_url)
+_is_sqlite = _db_url.startswith("sqlite")
+
+
 def _ensure_sqlite_dir() -> None:
-    if settings.database_url.startswith("sqlite"):
-        db_path = settings.database_url.split("///", 1)[-1]
+    if _is_sqlite:
+        db_path = _db_url.split("///", 1)[-1]
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)
 
 
 _ensure_sqlite_dir()
 
-_is_sqlite = settings.database_url.startswith("sqlite")
-
 engine = create_engine(
-    settings.database_url,
+    _db_url,
     echo=settings.is_dev,
     connect_args={"check_same_thread": False} if _is_sqlite else {},
 )
