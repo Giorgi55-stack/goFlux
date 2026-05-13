@@ -11,6 +11,7 @@ from app.config import get_settings
 from app.database import init_db
 from app.routes import campaigns as campaigns_routes
 from app.routes import clients as clients_routes
+from app.scheduler import start_scheduler, stop_scheduler
 from app.services import meta_api
 from app.services.meta_api import MetaAPIError
 
@@ -18,7 +19,11 @@ from app.services.meta_api import MetaAPIError
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
-    yield
+    start_scheduler()
+    try:
+        yield
+    finally:
+        stop_scheduler()
 
 
 settings = get_settings()
