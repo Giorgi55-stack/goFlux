@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Regras — Meta Ads Automation{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-semibold">Regras</h1>
+  <a href="/rules/new"
+     class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm font-medium">
+    + Nova regra
+  </a>
+</div>
+
+{% if rules %}
+<div class="bg-white border border-gray-200 rounded overflow-hidden">
+  <table class="w-full text-sm">
+    <thead class="bg-gray-100 text-gray-600">
+      <tr>
+        <th class="text-left px-3 py-2 font-medium">Nome</th>
+        <th class="text-left px-3 py-2 font-medium">Cliente</th>
+        <th class="text-left px-3 py-2 font-medium">Tipo</th>
+        <th class="text-left px-3 py-2 font-medium">Trigger</th>
+        <th class="text-left px-3 py-2 font-medium">Hora</th>
+        <th class="text-left px-3 py-2 font-medium">Escopo</th>
+        <th class="text-left px-3 py-2 font-medium">Status</th>
+        <th class="text-left px-3 py-2 font-medium">Executar</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rules %}
+      <tr class="border-t border-gray-100">
+        <td class="px-3 py-2 font-medium">{{ r.name }}</td>
+        <td class="px-3 py-2 text-xs">
+          {% if r.client_id and r.client_id in clients %}
+            {{ clients[r.client_id].name }}
+          {% else %}
+            <span class="text-gray-400">(global)</span>
+          {% endif %}
+        </td>
+        <td class="px-3 py-2 text-xs">{{ type_labels[r.type] }}</td>
+        <td class="px-3 py-2 text-xs">
+          {% if r.trigger_type.value == 'day_of_week' %}
+            {{ r.trigger_config.get('days', []) | join(', ') }}
+          {% else %}
+            {{ r.trigger_config.get('date', '?') }}
+          {% endif %}
+        </td>
+        <td class="px-3 py-2 font-mono text-xs">{{ r.execution_time }} UTC</td>
+        <td class="px-3 py-2 text-xs">{{ scope_labels[r.target_scope] }}</td>
+        <td class="px-3 py-2 text-xs">
+          {% if r.active %}
+            <span class="text-green-600">● ativa</span>
+          {% else %}
+            <span class="text-gray-400">○ inativa</span>
+          {% endif %}
+        </td>
+        <td class="px-3 py-2 text-xs">
+          <button hx-post="/api/rules/{{ r.id }}/execute-now"
+                  hx-target="#exec-result-{{ r.id }}"
+                  hx-swap="innerHTML"
+                  class="text-blue-600 hover:underline">
+            Executar agora
+          </button>
+          <span id="exec-result-{{ r.id }}"></span>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="bg-white border border-gray-200 rounded p-8 text-center text-gray-500">
+  Nenhuma regra cadastrada.
+  <a href="/rules/new" class="text-blue-600 hover:underline">Cadastre a primeira</a>.
+</div>
+{% endif %}
+{% endblock %}

@@ -150,12 +150,5 @@
     }
   });
 
-  document.body.addEventListener('htmx:beforeSwap', function (e) {
-    var status = e.detail.xhr.status;
-    if (status >= 400 && status < 500) {
-      e.detail.shouldSwap = true;
-      e.detail.isError = false;
-    }
-  });
 </script>
 {% endblock %}

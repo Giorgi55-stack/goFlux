@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% block title %}Nova regra — Meta Ads Automation{% endblock %}
+{% block content %}
+<div class="max-w-2xl">
+  <h1 class="text-2xl font-semibold mb-6">Nova regra</h1>
+
+  <form hx-post="/rules" hx-target="#form-errors" hx-swap="innerHTML"
+        class="space-y-5 bg-white border border-gray-200 rounded p-6">
+    <div id="form-errors"></div>
+
+    <div>
+      <label class="block text-sm font-medium mb-1">
+        Nome <span class="text-red-500">*</span>
+      </label>
+      <input name="name" required
+             class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium mb-1">Cliente</label>
+      <select name="client_id"
+              class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <option value="">— Global (todos os clientes) —</option>
+        {% for c in clients %}
+        <option value="{{ c.id }}">{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium mb-2">Tipo de ação</label>
+      <div class="flex flex-wrap gap-4 text-sm">
+        <label class="inline-flex items-center gap-1">
+          <input type="radio" name="type" value="pause" checked> Pausar
+        </label>
+        <label class="inline-flex items-center gap-1">
+          <input type="radio" name="type" value="resume"> Reativar
+        </label>
+        <label class="inline-flex items-center gap-1">
+          <input type="radio" name="type" value="adjust_budget"> Ajustar orçamento
+        </label>
+      </div>
+    </div>
+
+    <div data-when-type="adjust_budget" class="hidden space-y-2 bg-gray-50 border border-gray-200 rounded p-3">
+      <label class="block text-sm font-medium">Ajuste de orçamento</label>
+      <div class="flex flex-wrap gap-4 text-sm">
+        <label class="inline-flex items-center gap-1">
+          <input type="radio" name="budget_value_kind" value="percent" checked>
+          % do orçamento original
+        </label>
+        <label class="inline-flex items-center gap-1">
+          <input type="radio" name="budget_value_kind" value="cents">
+          Valor fixo (centavos)
+        </label>
+      </div>
+      <input name="budget_value" type="number" min="0" step="0.01" placeholder="50"
+             class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      <p class="text-xs text-gray-500">
+        Ex: <strong>50</strong> (%) = corta orçamento pela metade.
+        <strong>5000</strong> (centavos) = R$ 50,00.
+      </p>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium mb-2">Quando disparar</label>
+      <div class="flex flex-wrap gap-4 text-sm">
+        <label class="inline-flex items-center gap-1">
+          <input type="radio" name="trigger_type" value="day_of_week" checked>
+          Dia da semana
+        </label>
+        <label class="inline-flex items-center gap-1">
+          <input type="radio" name="trigger_type" value="specific_date">
+          Data específica
+        </label>
+      </div>
+    </div>
+
+    <div data-when-trigger="day_of_week" class="space-y-1">
+      <label class="block text-sm font-medium">Dias</label>
+      <div class="flex flex-wrap gap-3 text-sm">
+        {% for code, label in weekday_options %}
+        <label class="inline-flex items-center gap-1 border border-gray-300 rounded px-2 py-1 cursor-pointer hover:bg-gray-50">
+          <input type="checkbox" name="days" value="{{ code }}"> {{ label }}
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div data-when-trigger="specific_date" class="hidden">
+      <label class="block text-sm font-medium mb-1">Data</label>
+      <input type="date" name="specific_date"
+             class="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium mb-1">
+        Horário (UTC) <span class="text-red-500">*</span>
+      </label>
+      <input type="time" name="execution_time" required value="09:00"
+             class="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      <p class="text-xs text-gray-500">
+        Dispara no primeiro tick horário ≥ este horário (scheduler roda a cada hora).
+      </p>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium mb-2">Escopo</label>
+      <div class="space-y-1 text-sm">
+        <label class="block">
+          <input type="radio" name="target_scope" value="created_by_app_only" checked>
+          Apenas campanhas criadas pela aplicação
+        </label>
+        <label class="block">
+          <input type="radio" name="target_scope" value="all_campaigns">
+          Todas as campanhas (do cliente)
+        </label>
+        <label class="block">
+          <input type="radio" name="target_scope" value="specific_campaigns">
+          Campanhas específicas
+        </label>
+      </div>
+    </div>
+
+    <div data-when-scope="specific_campaigns" class="hidden">
+      <label class="block text-sm font-medium mb-1">
+        IDs (meta_campaign_id, vírgula ou linha)
+      </label>
+      <textarea name="target_campaign_ids" rows="2"
+                class="w-full border border-gray-300 rounded px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+    </div>
+
+    <div>
+      <label class="inline-flex items-center gap-2 text-sm">
+        <input type="checkbox" name="active" checked> Regra ativa
+      </label>
+    </div>
+
+    <div class="flex justify-end gap-2 pt-3 border-t border-gray-100">
+      <a href="/rules" class="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 text-sm">Cancelar</a>
+      <button type="submit"
+              class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm font-medium">
+        Salvar
+      </button>
+    </div>
+  </form>
+</div>
+
+<script>
+  function syncConditionalFields() {
+    var type = document.querySelector('input[name="type"]:checked');
+    document.querySelectorAll('[data-when-type]').forEach(function (el) {
+      el.classList.toggle('hidden', !type || el.getAttribute('data-when-type') !== type.value);
+    });
+    var trig = document.querySelector('input[name="trigger_type"]:checked');
+    document.querySelectorAll('[data-when-trigger]').forEach(function (el) {
+      el.classList.toggle('hidden', !trig || el.getAttribute('data-when-trigger') !== trig.value);
+    });
+    var scope = document.querySelector('input[name="target_scope"]:checked');
+    document.querySelectorAll('[data-when-scope]').forEach(function (el) {
+      el.classList.toggle('hidden', !scope || el.getAttribute('data-when-scope') !== scope.value);
+    });
+  }
+  document.addEventListener('change', syncConditionalFields);
+  document.addEventListener('DOMContentLoaded', syncConditionalFields);
+  syncConditionalFields();
+</script>
+{% endblock %}

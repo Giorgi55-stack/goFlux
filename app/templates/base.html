@@ -29,6 +29,13 @@
       var m = document.cookie.match(/(?:^|; )csrftoken=([^;]+)/);
       if (m) e.detail.headers['x-csrftoken'] = decodeURIComponent(m[1]);
     });
+    document.body.addEventListener('htmx:beforeSwap', function (e) {
+      var status = e.detail.xhr.status;
+      if (status >= 400 && status < 500) {
+        e.detail.shouldSwap = true;
+        e.detail.isError = false;
+      }
+    });
   </script>
 </body>
 </html>

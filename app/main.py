@@ -11,6 +11,7 @@ from app.config import get_settings
 from app.database import init_db
 from app.routes import campaigns as campaigns_routes
 from app.routes import clients as clients_routes
+from app.routes import rules as rules_routes
 from app.scheduler import start_scheduler, stop_scheduler
 from app.services import meta_api
 from app.services.meta_api import MetaAPIError
@@ -43,6 +44,7 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 app.include_router(clients_routes.router)
 app.include_router(campaigns_routes.router)
+app.include_router(rules_routes.router)
 
 
 @app.get("/health")
