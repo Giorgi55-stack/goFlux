@@ -45,21 +45,15 @@ ADVANTAGE_PLUS_OFF_TARGETING: dict[str, Any] = {
     "instagram_positions": ["stream", "story", "explore", "reels"],
 }
 
+# API v25 narrowed creative_features_spec to a small allow-list of
+# UPPERCASE keys. The blanket "standard_enhancements" opt-out is no longer
+# available via the API — those default-ON enhancements must be turned off
+# in the Ads Manager UI per campaign if needed.
 ADVANTAGE_PLUS_OFF_CREATIVE: dict[str, Any] = {
     "creative_features_spec": {
-        "standard_enhancements": {"enroll_status": "OPT_OUT"},
-        "image_uncrop": {"enroll_status": "OPT_OUT"},
-        "music": {"enroll_status": "OPT_OUT"},
-        "ad_translation": {"enroll_status": "OPT_OUT"},
-        "image_enhancement": {"enroll_status": "OPT_OUT"},
-        "text_optimizations": {"enroll_status": "OPT_OUT"},
-        "image_touchups": {"enroll_status": "OPT_OUT"},
-        "video_auto_crop": {"enroll_status": "OPT_OUT"},
-        "description_automation": {"enroll_status": "OPT_OUT"},
-        "image_background_gen": {"enroll_status": "OPT_OUT"},
-        "image_animation": {"enroll_status": "OPT_OUT"},
-        "add_text_overlay": {"enroll_status": "OPT_OUT"},
-        "image_templates": {"enroll_status": "OPT_OUT"},
+        "IMAGE_ANIMATION": {"enroll_status": "OPT_OUT"},
+        "TEXT_OVERLAY_TRANSLATION": {"enroll_status": "OPT_OUT"},
+        "IG_VIDEO_NATIVE_SUBTITLE": {"enroll_status": "OPT_OUT"},
     }
 }
 
