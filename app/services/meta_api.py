@@ -35,13 +35,12 @@ ADVANTAGE_PLUS_OFF_TARGETING: dict[str, Any] = {
     # NOTE: "reels" is only valid for Instagram. Facebook Reels uses
     # "facebook_reels" as a separate position.
     "publisher_platforms": ["facebook", "instagram"],
+    # Stable v25+ placements only (video_feeds, marketplace got deprecated).
     "facebook_positions": [
         "feed",
-        "marketplace",
-        "video_feeds",
         "story",
-        "facebook_reels",
         "search",
+        "facebook_reels",
     ],
     "instagram_positions": ["stream", "story", "explore", "reels"],
 }
