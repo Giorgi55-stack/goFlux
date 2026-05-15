@@ -75,11 +75,15 @@ def _build_targeting(audience: dict[str, Any]) -> dict[str, Any]:
             "geo_locations": audience.get("geo_locations")
             or {"countries": ["BR"]},
         }
-    else:
-        base = audience.get("targeting") or {
-            "geo_locations": {"countries": ["BR"]}
-        }
-    return meta_api.merge_advantage_off_targeting(base)
+        return meta_api.merge_advantage_off_targeting(base)
+    if "targeting" in audience:
+        # Already-resolved targeting (typically from ai_targeting). The
+        # AI pipeline already applied conditional Advantage+ opt-outs
+        # based on user opt-in; trust it as-is.
+        return audience["targeting"]
+    return meta_api.merge_advantage_off_targeting(
+        {"geo_locations": {"countries": ["BR"]}}
+    )
 
 
 def _resolve_existing_post_id(

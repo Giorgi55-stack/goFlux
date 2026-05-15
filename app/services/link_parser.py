@@ -6,6 +6,10 @@ _FB_USERNAME_PAGE = re.compile(r"facebook\.com/[^/?]+/posts/(\d{8,})")
 _FB_STORY_FBID = re.compile(r"[?&]story_fbid=(\d+)")
 _FB_ID = re.compile(r"[?&]id=(\d+)")
 _FB_PFBID = re.compile(r"facebook\.com/.+/posts/pfbid")
+_FB_PHOTO_FBID = re.compile(
+    r"facebook\.com/(?:photo|photo\.php)/?\?[^\s]*\bfbid=(\d+)"
+)
+_FB_VIDEO_NUMERIC = re.compile(r"facebook\.com/(\d+)/videos/(\d+)")
 
 _IG_SHORTCODE = re.compile(r"instagram\.com/(?:p|reel|tv)/([A-Za-z0-9_-]+)")
 
@@ -28,11 +32,21 @@ def parse_facebook_post_url(
     if m:
         return f"{m.group(1)}_{m.group(2)}"
 
+    m = _FB_VIDEO_NUMERIC.search(url)
+    if m:
+        return f"{m.group(1)}_{m.group(2)}"
+
     if "permalink.php" in url or "story.php" in url:
         story = _FB_STORY_FBID.search(url)
         page = _FB_ID.search(url)
         if story and page:
             return f"{page.group(1)}_{story.group(1)}"
+
+    # Photo URLs: facebook.com/photo/?fbid=X&set=Y or facebook.com/photo.php?fbid=X
+    # The fbid is the post_id; we need a page_id from the caller.
+    m = _FB_PHOTO_FBID.search(url)
+    if m and client_page_id:
+        return f"{client_page_id}_{m.group(1)}"
 
     if _FB_PFBID.search(url):
         return None

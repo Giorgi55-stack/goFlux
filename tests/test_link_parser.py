@@ -42,6 +42,30 @@ class TestParseFacebookPostUrl:
         url = "https://www.facebook.com/zsmaisbahia/posts/pfbid02xKabc123"
         assert parse_facebook_post_url(url, client_page_id="999") is None
 
+    def test_photo_url_with_client_page(self):
+        url = "https://www.facebook.com/photo/?fbid=2160995444725069&set=a.146414199516547"
+        assert (
+            parse_facebook_post_url(url, client_page_id="889035774300623")
+            == "889035774300623_2160995444725069"
+        )
+
+    def test_photo_php_url(self):
+        url = "https://www.facebook.com/photo.php?fbid=12345&set=a.999"
+        assert (
+            parse_facebook_post_url(url, client_page_id="888")
+            == "888_12345"
+        )
+
+    def test_photo_url_without_client_page_returns_none(self):
+        url = "https://www.facebook.com/photo/?fbid=12345&set=a.999"
+        assert parse_facebook_post_url(url) is None
+
+    def test_video_url(self):
+        url = "https://www.facebook.com/100012345678/videos/9876543210"
+        assert (
+            parse_facebook_post_url(url) == "100012345678_9876543210"
+        )
+
     def test_arbitrary_url(self):
         assert parse_facebook_post_url("https://example.com") is None
 

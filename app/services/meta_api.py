@@ -60,14 +60,30 @@ ADVANTAGE_PLUS_OFF_CREATIVE: dict[str, Any] = {
 
 def merge_advantage_off_targeting(
     targeting: dict[str, Any],
+    enable: Optional[set[str]] = None,
 ) -> dict[str, Any]:
-    """Return a copy of `targeting` with Advantage+ opt-out keys forced.
+    """Return a copy of `targeting` with Advantage+ opt-out keys applied,
+    minus any items in `enable`.
 
-    Caller-provided values for non-Advantage keys (interests, age, geo, etc.)
-    are preserved. The opt-out keys always win — Advantage+ stays OFF.
+    Recognized enable values:
+      - "audience": skip targeting_automation.advantage_audience=0 so Meta
+        can expand the audience automatically (Advantage detailed targeting)
+      - "placements": skip explicit publisher_platforms/positions so Meta
+        picks placements automatically (Advantage+ placements)
     """
+    enable = enable or set()
     merged = dict(targeting)
-    merged.update(ADVANTAGE_PLUS_OFF_TARGETING)
+    if "audience" not in enable:
+        merged["targeting_automation"] = {"advantage_audience": 0}
+    if "placements" not in enable:
+        merged["publisher_platforms"] = ["facebook", "instagram"]
+        merged["facebook_positions"] = [
+            "feed",
+            "story",
+            "search",
+            "facebook_reels",
+        ]
+        merged["instagram_positions"] = ["stream", "story", "explore", "reels"]
     return merged
 
 
@@ -370,14 +386,18 @@ def search_targeting(
     class_: Optional[str] = None,
     locale: str = "pt_BR",
     limit: int = 10,
+    **extra_params: Any,
 ) -> list[dict[str, Any]]:
     """Search Meta's targeting catalog.
 
     `type_` examples: "adinterest" (interests), "adTargetingCategory"
-    (with class_="behaviors" or "demographics"), "adgeolocation",
+    (with class_="behaviors" or "demographics"), "adgeolocation"
+    (with location_types=["region"] / ["city"] / ["country"] in extra_params),
     "adworkemployer", "adworkposition", "adstudyschool", "adlocale".
-    Returns up to `limit` candidates with id, name, audience_size,
-    path (taxonomy), and topic.
+
+    For adgeolocation searches, pass extra_params like
+    location_types=["region"] and country_code="BR" to scope.
+    Returns up to `limit` candidates as dicts.
     """
     init_api()
     params: dict[str, Any] = {
@@ -388,17 +408,23 @@ def search_targeting(
     }
     if class_:
         params["class"] = class_
+    params.update(extra_params)
     results = TargetingSearch.search(params=params)
     return [
         {
             "id": r.get("id"),
+            "key": r.get("key"),
             "name": r.get("name"),
+            "type": r.get("type"),
+            "country_code": r.get("country_code"),
+            "country_name": r.get("country_name"),
+            "supports_region": r.get("supports_region"),
+            "supports_city": r.get("supports_city"),
             "audience_size": r.get("audience_size"),
             "audience_size_lower_bound": r.get("audience_size_lower_bound"),
             "audience_size_upper_bound": r.get("audience_size_upper_bound"),
             "path": r.get("path"),
             "topic": r.get("topic"),
-            "type": r.get("type"),
         }
         for r in results
     ]
