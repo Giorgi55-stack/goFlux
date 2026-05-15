@@ -74,6 +74,26 @@ class NotionClient:
             return None
         return prop.get("number")
 
+    @staticmethod
+    def _url(prop: Optional[dict[str, Any]]) -> Optional[str]:
+        if not prop:
+            return None
+        return prop.get("url")
+
+    @staticmethod
+    def _first_file_url(prop: Optional[dict[str, Any]]) -> Optional[str]:
+        """Return a downloadable URL for the first file in a files property.
+        Notion file URLs (uploaded type) are signed and expire ~1h."""
+        if not prop or not prop.get("files"):
+            return None
+        for f in prop["files"]:
+            ftype = f.get("type")
+            if ftype == "file":
+                return f.get("file", {}).get("url")
+            if ftype == "external":
+                return f.get("external", {}).get("url")
+        return None
+
     def extract_brief(self, page: dict[str, Any]) -> dict[str, Any]:
         props = page.get("properties", {})
         return {
@@ -86,6 +106,16 @@ class NotionClient:
                 props.get("Descricao publico")
             ),
             "criativos_urls_raw": self._rich_text(props.get("Criativos URLs")),
+            # Dark post fields
+            "tipo_criativo": self._select_name(props.get("Tipo criativo")),
+            "texto_principal": self._rich_text(props.get("Texto principal")),
+            "headline": self._rich_text(props.get("Headline")),
+            "descricao_creative": self._rich_text(
+                props.get("Descricao creative")
+            ),
+            "link_destino": self._url(props.get("Link destino")),
+            "cta_tipo": self._select_name(props.get("CTA tipo")),
+            "imagem_url": self._first_file_url(props.get("Imagem")),
         }
 
 
@@ -104,6 +134,62 @@ def _parse_urls(raw: str) -> list[str]:
         if line:
             items.append(line)
     return items
+
+
+def _download_image(url: str) -> bytes:
+    r = httpx.get(url, timeout=60, follow_redirects=True)
+    r.raise_for_status()
+    return r.content
+
+
+def _build_creatives(
+    brief: dict[str, Any],
+) -> list[dict[str, Any]]:
+    tipo = (brief.get("tipo_criativo") or "Post existente").strip()
+    if tipo == "Dark post":
+        if not brief.get("imagem_url"):
+            raise ValueError(
+                "Tipo criativo 'Dark post' requer Imagem anexada no brief"
+            )
+        if not brief.get("texto_principal"):
+            raise ValueError("Dark post requer Texto principal")
+        if not brief.get("headline"):
+            raise ValueError("Dark post requer Headline")
+        if not brief.get("link_destino"):
+            raise ValueError("Dark post requer Link destino")
+
+        try:
+            image_bytes = _download_image(brief["imagem_url"])
+        except httpx.HTTPError as e:
+            raise ValueError(
+                f"Falha ao baixar a imagem do Notion: {e}"
+            ) from e
+        if not image_bytes:
+            raise ValueError("Imagem do Notion veio vazia")
+
+        return [
+            {
+                "type": "dark_post",
+                "label": "darkpost",
+                "primary_text": brief["texto_principal"],
+                "headline": brief["headline"],
+                "description": brief.get("descricao_creative") or None,
+                "cta_type": brief.get("cta_tipo") or "LEARN_MORE",
+                "link": brief["link_destino"],
+                "image_bytes": image_bytes,
+            }
+        ]
+
+    # Default: existing posts
+    urls = _parse_urls(brief.get("criativos_urls_raw") or "")
+    if not urls:
+        raise ValueError(
+            "Criativos URLs vazio (uma URL por linha) — ou marca Tipo criativo como Dark post"
+        )
+    return [
+        {"type": "existing_link", "url": url, "label": f"c{i + 1}"}
+        for i, url in enumerate(urls)
+    ]
 
 
 def _process_one(nc: NotionClient, brief: dict[str, Any]) -> str:
@@ -131,15 +217,7 @@ def _process_one(nc: NotionClient, brief: dict[str, Any]) -> str:
                 raise ValueError("Campo Orçamento inválido (deve ser > 0)")
             daily_budget_cents = int(round(float(orcamento) * 100))
 
-            urls = _parse_urls(brief.get("criativos_urls_raw") or "")
-            if not urls:
-                raise ValueError(
-                    "Campo Criativos URLs vazio (uma URL por linha)"
-                )
-            creatives = [
-                {"type": "existing_link", "url": url, "label": f"c{i + 1}"}
-                for i, url in enumerate(urls)
-            ]
+            creatives = _build_creatives(brief)
 
             description = (brief.get("descricao_publico") or "").strip()
             if not description:
