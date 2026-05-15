@@ -14,7 +14,7 @@ from app.routes import clients as clients_routes
 from app.routes import history as history_routes
 from app.routes import rules as rules_routes
 from app.scheduler import start_scheduler, stop_scheduler
-from app.services import meta_api
+from app.services import ai_targeting, meta_api, notion_sync
 from app.services.meta_api import MetaAPIError
 
 
@@ -75,3 +75,40 @@ def test_token(user: CurrentUser) -> dict[str, Any]:
         "ad_accounts_count": len(accounts),
         "ad_accounts": accounts,
     }
+
+
+@app.post("/api/audiences/suggest")
+def suggest_audience(
+    payload: dict[str, Any], user: CurrentUser
+) -> dict[str, Any]:
+    """AI-driven audience suggestion. Body: {description: str, country?: str}."""
+    description = (payload.get("description") or "").strip()
+    country = (payload.get("country") or "BR").upper()
+    if not description:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="description is required",
+        )
+    try:
+        suggestion, targeting = ai_targeting.suggest_and_resolve(
+            description=description, country=country
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except (RuntimeError, MetaAPIError) as e:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e)
+        )
+    return {
+        "ok": True,
+        "suggestion": suggestion,
+        "targeting": targeting,
+    }
+
+
+@app.post("/api/notion/sync-now")
+def notion_sync_now(user: CurrentUser) -> dict[str, Any]:
+    """Force a Notion brief sync run right now (instead of waiting for the
+    scheduled poll). Same logic as the cron job."""
+    summary = notion_sync.process_ready_briefs()
+    return {"ok": True, "summary": summary}

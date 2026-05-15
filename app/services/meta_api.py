@@ -8,6 +8,7 @@ from facebook_business.adobjects.adaccount import AdAccount
 from facebook_business.adobjects.campaign import Campaign as FBCampaign
 from facebook_business.adobjects.iguser import IGUser
 from facebook_business.adobjects.page import Page
+from facebook_business.adobjects.targetingsearch import TargetingSearch
 from facebook_business.adobjects.user import User
 from facebook_business.api import FacebookAdsApi
 from facebook_business.exceptions import FacebookRequestError
@@ -343,6 +344,47 @@ def create_unpublished_link_post(
         params["link"] = link
     post = page.create_feed(params=params)
     return post["id"]
+
+
+@with_retry()
+def search_targeting(
+    query: str,
+    type_: str = "adinterest",
+    class_: Optional[str] = None,
+    locale: str = "pt_BR",
+    limit: int = 10,
+) -> list[dict[str, Any]]:
+    """Search Meta's targeting catalog.
+
+    `type_` examples: "adinterest" (interests), "adTargetingCategory"
+    (with class_="behaviors" or "demographics"), "adgeolocation",
+    "adworkemployer", "adworkposition", "adstudyschool", "adlocale".
+    Returns up to `limit` candidates with id, name, audience_size,
+    path (taxonomy), and topic.
+    """
+    init_api()
+    params: dict[str, Any] = {
+        "type": type_,
+        "q": query,
+        "locale": locale,
+        "limit": limit,
+    }
+    if class_:
+        params["class"] = class_
+    results = TargetingSearch.search(params=params)
+    return [
+        {
+            "id": r.get("id"),
+            "name": r.get("name"),
+            "audience_size": r.get("audience_size"),
+            "audience_size_lower_bound": r.get("audience_size_lower_bound"),
+            "audience_size_upper_bound": r.get("audience_size_upper_bound"),
+            "path": r.get("path"),
+            "topic": r.get("topic"),
+            "type": r.get("type"),
+        }
+        for r in results
+    ]
 
 
 @with_retry()

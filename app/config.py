@@ -24,6 +24,17 @@ class Settings(BaseSettings):
     secret_key: str = "mude-isso-em-producao"
     env: str = "development"
 
+    # LLM provider (OpenAI-compatible chat completions API).
+    # Defaults to Groq + Llama 3.3 70B (free tier).
+    llm_base_url: str = "https://api.groq.com/openai/v1"
+    llm_api_key: str = ""
+    llm_model: str = "llama-3.3-70b-versatile"
+
+    # Notion integration for campaign briefs sync
+    notion_api_key: str = ""
+    notion_database_id: str = ""
+    notion_poll_minutes: int = 5
+
     @property
     def is_dev(self) -> bool:
         return self.env == "development"
