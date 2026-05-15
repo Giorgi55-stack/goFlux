@@ -26,11 +26,17 @@ def _ensure_sqlite_dir() -> None:
 
 _ensure_sqlite_dir()
 
-engine = create_engine(
-    _db_url,
-    echo=settings.is_dev,
-    connect_args={"check_same_thread": False} if _is_sqlite else {},
-)
+_engine_kwargs: dict = {
+    "echo": settings.is_dev,
+    "connect_args": {"check_same_thread": False} if _is_sqlite else {},
+}
+# Postgres serverless providers (Neon, Supabase) hibernate idle connections;
+# pre-ping detects dead sockets and pool_recycle preempts the cutoff window.
+if not _is_sqlite:
+    _engine_kwargs["pool_pre_ping"] = True
+    _engine_kwargs["pool_recycle"] = 240  # under Neon's idle cutoff
+
+engine = create_engine(_db_url, **_engine_kwargs)
 
 
 def init_db() -> None:
