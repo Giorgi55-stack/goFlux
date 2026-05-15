@@ -36,6 +36,8 @@ def client(session):
 
 @pytest.fixture
 def mock_meta(monkeypatch):
+    from app.services.meta_api import merge_advantage_off_targeting
+
     m = MagicMock()
 
     adset_counter = count()
@@ -54,6 +56,8 @@ def mock_meta(monkeypatch):
     m.create_unpublished_link_post.return_value = "page_222_postX"
     m.upload_image.return_value = "imghash_abc"
     m.resolve_instagram_media_id.return_value = "ig_media_999"
+    # Keep merge helper real — it is pure dict transformation, not a Meta call
+    m.merge_advantage_off_targeting.side_effect = merge_advantage_off_targeting
 
     monkeypatch.setattr("app.services.campaign_builder.meta_api", m)
     monkeypatch.setattr("app.services.dark_post.meta_api", m)
@@ -357,3 +361,31 @@ class TestBuildCampaign:
         targeting = adset_kw["targeting"]
         assert targeting["custom_audiences"] == [{"id": "ca_1"}]
         assert targeting["geo_locations"] == {"countries": ["BR"]}
+
+    def test_advantage_plus_off_in_targeting(
+        self, session, client, mock_meta
+    ):
+        campaign_builder.build_campaign(
+            session=session,
+            client=client,
+            objective="OUTCOME_LEADS",
+            daily_budget_cents=5000,
+            audiences=[{"name": "A1", "custom_audience_id": "ca_1"}],
+            creatives=[
+                {
+                    "type": "existing_link",
+                    "url": "https://facebook.com/100/posts/200",
+                }
+            ],
+        )
+        targeting = mock_meta.create_adset.call_args.kwargs["targeting"]
+        # Advantage detailed targeting -> OFF
+        assert targeting["targeting_optimization"] == "none"
+        assert targeting["targeting_automation"] == {"advantage_audience": 0}
+        # Advantage placements -> OFF (explicit publisher_platforms + positions)
+        assert "facebook" in targeting["publisher_platforms"]
+        assert "instagram" in targeting["publisher_platforms"]
+        assert isinstance(targeting["facebook_positions"], list)
+        assert isinstance(targeting["instagram_positions"], list)
+        # No audience_network -> not in publisher_platforms (silently off)
+        assert "audience_network" not in targeting["publisher_platforms"]

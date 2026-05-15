@@ -58,12 +58,16 @@ def _name_ad(adset_name: str, creative_label: str) -> str:
 
 def _build_targeting(audience: dict[str, Any]) -> dict[str, Any]:
     if "custom_audience_id" in audience:
-        return {
+        base = {
             "custom_audiences": [{"id": audience["custom_audience_id"]}],
             "geo_locations": audience.get("geo_locations")
             or {"countries": ["BR"]},
         }
-    return audience.get("targeting") or {"geo_locations": {"countries": ["BR"]}}
+    else:
+        base = audience.get("targeting") or {
+            "geo_locations": {"countries": ["BR"]}
+        }
+    return meta_api.merge_advantage_off_targeting(base)
 
 
 def _resolve_existing_post_id(

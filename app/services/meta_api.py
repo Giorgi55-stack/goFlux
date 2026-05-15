@@ -20,6 +20,61 @@ _RATE_LIMIT_CODES = {17, 32, 613, 80000, 80001, 80002, 80003, 80004, 80014}
 _initialized = False
 
 
+# ----- Advantage+ opt-out defaults -----
+# Applied to every adset and ad creative we create so Meta does not silently
+# expand audiences, swap placements, enhance images, generate music, or
+# translate copy. The user explicitly wants Advantage+ OFF on all campaigns
+# created by this app; override per-call if needed (etapa 12 may relax).
+
+ADVANTAGE_PLUS_OFF_TARGETING: dict[str, Any] = {
+    # Disable Advantage detailed targeting (audience expansion beyond what we set)
+    "targeting_optimization": "none",
+    "targeting_automation": {"advantage_audience": 0},
+    # Disable Advantage+ placements: explicit publisher_platforms + positions
+    "publisher_platforms": ["facebook", "instagram"],
+    "facebook_positions": [
+        "feed",
+        "marketplace",
+        "video_feeds",
+        "story",
+        "reels",
+        "search",
+    ],
+    "instagram_positions": ["stream", "story", "explore", "reels"],
+}
+
+ADVANTAGE_PLUS_OFF_CREATIVE: dict[str, Any] = {
+    "creative_features_spec": {
+        "standard_enhancements": {"enroll_status": "OPT_OUT"},
+        "image_uncrop": {"enroll_status": "OPT_OUT"},
+        "music": {"enroll_status": "OPT_OUT"},
+        "ad_translation": {"enroll_status": "OPT_OUT"},
+        "image_enhancement": {"enroll_status": "OPT_OUT"},
+        "text_optimizations": {"enroll_status": "OPT_OUT"},
+        "image_touchups": {"enroll_status": "OPT_OUT"},
+        "video_auto_crop": {"enroll_status": "OPT_OUT"},
+        "description_automation": {"enroll_status": "OPT_OUT"},
+        "image_background_gen": {"enroll_status": "OPT_OUT"},
+        "image_animation": {"enroll_status": "OPT_OUT"},
+        "add_text_overlay": {"enroll_status": "OPT_OUT"},
+        "image_templates": {"enroll_status": "OPT_OUT"},
+    }
+}
+
+
+def merge_advantage_off_targeting(
+    targeting: dict[str, Any],
+) -> dict[str, Any]:
+    """Return a copy of `targeting` with Advantage+ opt-out keys forced.
+
+    Caller-provided values for non-Advantage keys (interests, age, geo, etc.)
+    are preserved. The opt-out keys always win — Advantage+ stays OFF.
+    """
+    merged = dict(targeting)
+    merged.update(ADVANTAGE_PLUS_OFF_TARGETING)
+    return merged
+
+
 class MetaAPIError(Exception):
     def __init__(
         self,
@@ -198,13 +253,21 @@ def create_adset(
 
 @with_retry()
 def create_ad_creative_from_post(
-    ad_account_id: str, name: str, object_story_id: str
+    ad_account_id: str,
+    name: str,
+    object_story_id: str,
+    degrees_of_freedom_spec: Optional[dict[str, Any]] = None,
 ) -> str:
     init_api()
     account = AdAccount(ad_account_id)
-    creative = account.create_ad_creative(
-        params={"name": name, "object_story_id": object_story_id}
-    )
+    params: dict[str, Any] = {
+        "name": name,
+        "object_story_id": object_story_id,
+        "degrees_of_freedom_spec": (
+            degrees_of_freedom_spec or ADVANTAGE_PLUS_OFF_CREATIVE
+        ),
+    }
+    creative = account.create_ad_creative(params=params)
     return creative["id"]
 
 
@@ -215,6 +278,7 @@ def create_ad_creative_from_spec(
     page_id: str,
     link_data: dict[str, Any],
     instagram_actor_id: Optional[str] = None,
+    degrees_of_freedom_spec: Optional[dict[str, Any]] = None,
 ) -> str:
     init_api()
     account = AdAccount(ad_account_id)
@@ -224,9 +288,14 @@ def create_ad_creative_from_spec(
     }
     if instagram_actor_id:
         object_story_spec["instagram_actor_id"] = instagram_actor_id
-    creative = account.create_ad_creative(
-        params={"name": name, "object_story_spec": object_story_spec}
-    )
+    params: dict[str, Any] = {
+        "name": name,
+        "object_story_spec": object_story_spec,
+        "degrees_of_freedom_spec": (
+            degrees_of_freedom_spec or ADVANTAGE_PLUS_OFF_CREATIVE
+        ),
+    }
+    creative = account.create_ad_creative(params=params)
     return creative["id"]
 
 
