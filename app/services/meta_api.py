@@ -227,7 +227,13 @@ def create_campaign(
     daily_budget_cents: int,
     status: str = "PAUSED",
     special_ad_categories: Optional[list[str]] = None,
+    bid_strategy: str = "LOWEST_COST_WITHOUT_CAP",
 ) -> str:
+    """Create a Meta Campaign with CBO (daily_budget at campaign level).
+
+    bid_strategy=LOWEST_COST_WITHOUT_CAP is the safe default: Meta optimizes
+    for lowest cost without a manual bid cap, no bid_amount required.
+    """
     init_api()
     account = AdAccount(ad_account_id)
     campaign = account.create_campaign(
@@ -237,6 +243,7 @@ def create_campaign(
             "status": status,
             "special_ad_categories": special_ad_categories or [],
             "daily_budget": daily_budget_cents,
+            "bid_strategy": bid_strategy,
         }
     )
     return campaign["id"]
