@@ -17,6 +17,18 @@ _PT_MONTHS = {
     7: "jul", 8: "ago", 9: "set", 10: "out", 11: "nov", 12: "dez",
 }
 
+# Sensible defaults per ODAX objective. Meta rejects mismatched
+# objective/optimization_goal pairs (e.g. OUTCOME_TRAFFIC + LEAD_GENERATION
+# triggers a "bid_amount required" error). LOWEST_COST_WITHOUT_CAP is the
+# default bid strategy and does not require bid_amount.
+_DEFAULT_OPTIMIZATION_GOAL = {
+    "OUTCOME_LEADS": "LEAD_GENERATION",
+    "OUTCOME_TRAFFIC": "LANDING_PAGE_VIEWS",
+    "OUTCOME_ENGAGEMENT": "POST_ENGAGEMENT",
+    "OUTCOME_SALES": "OFFSITE_CONVERSIONS",
+    "OUTCOME_AWARENESS": "REACH",
+}
+
 
 def _sanitize(s: str, max_len: int = 30) -> str:
     s = unicodedata.normalize("NFKD", s)
@@ -159,7 +171,7 @@ def build_campaign(
     daily_budget_cents: int,
     audiences: list[dict[str, Any]],
     creatives: list[dict[str, Any]],
-    optimization_goal: str = "LEAD_GENERATION",
+    optimization_goal: Optional[str] = None,
     billing_event: str = "IMPRESSIONS",
     now: Optional[datetime] = None,
 ) -> Campaign:
@@ -167,6 +179,11 @@ def build_campaign(
         raise ValueError("at least one audience is required")
     if not creatives:
         raise ValueError("at least one creative is required")
+
+    if optimization_goal is None:
+        optimization_goal = _DEFAULT_OPTIMIZATION_GOAL.get(
+            objective, "LINK_CLICKS"
+        )
 
     campaign_name = _name_campaign(client, objective, now)
     logger.info("Building campaign: %s", campaign_name)
