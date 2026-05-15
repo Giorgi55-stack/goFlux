@@ -31,14 +31,16 @@ ADVANTAGE_PLUS_OFF_TARGETING: dict[str, Any] = {
     # Disable Advantage detailed targeting (audience expansion beyond what we set)
     "targeting_optimization": "none",
     "targeting_automation": {"advantage_audience": 0},
-    # Disable Advantage+ placements: explicit publisher_platforms + positions
+    # Disable Advantage+ placements: explicit publisher_platforms + positions.
+    # NOTE: "reels" is only valid for Instagram. Facebook Reels uses
+    # "facebook_reels" as a separate position.
     "publisher_platforms": ["facebook", "instagram"],
     "facebook_positions": [
         "feed",
         "marketplace",
         "video_feeds",
         "story",
-        "reels",
+        "facebook_reels",
         "search",
     ],
     "instagram_positions": ["stream", "story", "explore", "reels"],
@@ -93,8 +95,23 @@ class MetaAPIError(Exception):
     @classmethod
     def from_facebook_error(cls, err: FacebookRequestError) -> "MetaAPIError":
         code = err.api_error_code()
+        msg = err.api_error_message() or str(err)
+        # Try to surface error_user_msg which is far more specific than the
+        # top-level "Invalid parameter".
+        user_msg = None
+        try:
+            body = err.body() if callable(getattr(err, "body", None)) else None
+            if isinstance(body, dict):
+                error_obj = body.get("error", {})
+                user_msg = error_obj.get("error_user_msg") or error_obj.get(
+                    "error_user_title"
+                )
+        except Exception:
+            pass
+        if user_msg and user_msg not in msg:
+            msg = f"{msg}: {user_msg}"
         return cls(
-            message=err.api_error_message() or str(err),
+            message=msg,
             code=code,
             type_=err.api_error_type(),
             is_rate_limit=code in _RATE_LIMIT_CODES,
