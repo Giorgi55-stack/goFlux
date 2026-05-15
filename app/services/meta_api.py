@@ -28,8 +28,8 @@ _initialized = False
 # created by this app; override per-call if needed (etapa 12 may relax).
 
 ADVANTAGE_PLUS_OFF_TARGETING: dict[str, Any] = {
-    # Disable Advantage detailed targeting (audience expansion beyond what we set)
-    "targeting_optimization": "none",
+    # Disable Advantage detailed targeting via targeting_automation
+    # (the older targeting_optimization=none field was removed in v25+).
     "targeting_automation": {"advantage_audience": 0},
     # Disable Advantage+ placements: explicit publisher_platforms + positions.
     # NOTE: "reels" is only valid for Instagram. Facebook Reels uses

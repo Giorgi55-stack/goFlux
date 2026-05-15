@@ -379,9 +379,10 @@ class TestBuildCampaign:
             ],
         )
         targeting = mock_meta.create_adset.call_args.kwargs["targeting"]
-        # Advantage detailed targeting -> OFF
-        assert targeting["targeting_optimization"] == "none"
+        # Advantage detailed targeting -> OFF (targeting_optimization was
+        # removed from API v25+; only targeting_automation works now)
         assert targeting["targeting_automation"] == {"advantage_audience": 0}
+        assert "targeting_optimization" not in targeting
         # Advantage placements -> OFF (explicit publisher_platforms + positions)
         assert "facebook" in targeting["publisher_platforms"]
         assert "instagram" in targeting["publisher_platforms"]
